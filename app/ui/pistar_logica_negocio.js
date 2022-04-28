@@ -9,6 +9,8 @@ var tasks = new Array();
 
 let allGoals=[];
 
+var arrayScenarios = new Array();
+
 let penaltyW=1;
 let benefitW=2;
 let costW=1;
@@ -47,8 +49,6 @@ function calculatePath(){
 
     let i = {number:0}
     pathDFD2(goals[0], paths, [], [], i)
-    console.log("PATHS")
-    console.log(paths)
     printSequencePaths(paths)
     
 }
@@ -203,9 +203,6 @@ function printSequencePaths(paths){
 
 
                 if(aux.length == printnode.goals.length){
-                    console.log(lastIndex)
-                    debugger
-                    console.log(printable[lastIndex-1])
                     printnode.tasks.forEach(task =>{
 
                         printable[lastIndex-1].tasks.push(task)
@@ -221,11 +218,46 @@ function printSequencePaths(paths){
     })
 
     console.log("printable", printable)
+
+    getFailedSkippedScenarios(printable)
     populateModal(printable);
 
 
 }
 
+function getFeatureScenarios(task){
+
+    let feat= getTaskValue(task.id)
+
+    titulos.forEach(function(t){
+        if (normalize(t.name) == normalize(feat)) {
+            task.featName = feat
+            task.failScenarios = new Array();
+            task.skipScenarios = new Array();
+            if (t.failScenarios.length>0){
+                t.failScenarios.forEach(s => task.failScenarios.push(s))
+            } 
+            if(t.skipScenarios.length>0){
+                t.skipScenarios.forEach(s => task.skipScenarios.push(s))
+            }
+            
+            
+        }
+    });
+    
+}
+
+function getFailedSkippedScenarios(printable){
+    printable.forEach(print =>{
+        print.tasks.forEach(task =>{
+            getFeatureScenarios(task)
+
+
+
+
+        })
+    })
+}
 function populateModal(printable){
     $('.modal-sequence .modal-body').html("")
 
@@ -234,14 +266,55 @@ function populateModal(printable){
         let combinedArray = print.goals.concat(print.tasks)
         let resultstring = "";
         combinedArray.forEach(element =>{
-            resultstring = resultstring + element.name + "<br>"
+            if(element.green){
+                resultstring = resultstring +"<span style='color:#2b6d24;'>"+ element.name + "</span><br>"
+
+            }
+            else{
+                resultstring = resultstring +"<span style='color:#8c2026;'>"+ element.name + "</span><br>"
+            }
+        })
+        let scenarios = new Array();
+        print.tasks.forEach(t=>{
+            if(t.failScenarios){
+                t.failScenarios.forEach(f => scenarios.push(f))
+            }
+            if(t.skipScenarios){
+                t.skipScenarios.forEach(ts => scenarios.push(ts))
+            }
+           
+
         })
         $('.modal-sequence .modal-body').append('<p> <b>'+ i + '</b>: '+resultstring+'</p>')
+        let filename = "scenariosIteration"+i;
+        scenarios = arrayScenarios.push(scenarios)
+        $('.modal-sequence .modal-body').append('<div><button onclick="downloadScenario('+i+')">Baixar Informação de Cenários</button></div>')
+
         i++;
 
     })
-    debugger
     $('.modal-sequence').modal('show');
+}
+
+function downloadScenario(index){
+    debugger
+    let i = index-1;
+    let scenarios = arrayScenarios[i];
+    console.log("oi")
+    let text= ""
+    scenarios.forEach(s => text = text + JSON.stringify(s) + "\n")
+    let element = document.createElement('a');
+    element.setAttribute('href', 'data:text/json;charset=utf-8,' + encodeURIComponent(text));
+    element.setAttribute('download', 'scenariosSeq'+index+".txt");
+  
+    element.style.display = 'none';
+    document.body.appendChild(element);
+  
+    element.click();
+  
+    // document.body.removeChild(element);
+
+    
 }
 
 
@@ -262,7 +335,6 @@ function naturalCompare(a,b){
 
 
 function pathDFD2(goal, paths, visited, queue, i){
-    debugger
     queue.push(goal);
     visited.push(goal.id)
 
@@ -285,11 +357,9 @@ function pathDFD2(goal, paths, visited, queue, i){
 
     //Verificar se tem notação
     //let reg = /\[DM\(/;
-    let reg = /\(G|T(1-9)+\#/
+    let reg = /(\((G|T)[1-9]+\#)/ 
     let dm = findRegex(reg, goal.name);
-
     if(dm!=null){
-        console.log("UHUL")
         decisionAnotation(goal, dm);
 
     }
@@ -299,7 +369,7 @@ function pathDFD2(goal, paths, visited, queue, i){
      isOrRefinement(goal, linkarray);
      if(linkarray.length>0){//if is type OR
         let child = getHighestPriorityNode(goal.children);
-     
+        child.green = false;
 
         pathDFD2(child, paths, visited, queue, i)
 
@@ -324,12 +394,11 @@ function pathDFD2(goal, paths, visited, queue, i){
             if(child.type=='Task'){
                 result = getTaskResult(child.id);
                 result = getResult(result);
+                child.result = result;
 
                 let dependency = getFactorValue(child.id, "dependency");
-                console.log(dependency);
                 if(dependency!=undefined){
                     let linesD = dependency.split('\n');
-                    console.log(linesD)
                     linesD.forEach(line=>{
                         if(!checkDependency(line)) result = false;                       
 
@@ -338,12 +407,14 @@ function pathDFD2(goal, paths, visited, queue, i){
     
             }
             if(result){
-                visited.push(child.id)
+                // visited.push(child.id)
+                child.green = true
             }
             else{
-                pathDFD2(child, paths, visited, queue, i)
-
+                child.green = false
+                
             }
+            pathDFD2(child, paths, visited, queue, i)
 
         } )
     
@@ -382,7 +453,6 @@ function findDependencyOnList(reg, word, added=true){
 
 }
 function checkDependency(dep){
-    debugger
     
 
   
@@ -404,7 +474,6 @@ function checkDependency(dep){
             let varResult = dependencyObj.varResult;
             if(listDependency.operator==='='){
                 if(listDependency.result === varResult){
-                    console.log("true")
                     return true
                 }
               
@@ -423,7 +492,6 @@ function checkDependency(dep){
             let varResult = dependencyObj.varResult;
             if(listDependency.operator==='!='){
                 if(listDependency.result === varResult){
-                    console.log("true")
                     return true
                 }
               
@@ -450,7 +518,6 @@ function checkDependency(dep){
             let b = parseFloat(varResult)
             if(listDependency.operator==='>'){
                 if(listDependency.result === varResult){
-                    console.log("true")
                     return true
                 }
                 if(a>b){
@@ -460,7 +527,6 @@ function checkDependency(dep){
             }
             if(listDependency.operator==='='){
                 if(a >= b){
-                    console.log("true")
                     return true
                 }
               
@@ -480,7 +546,6 @@ function checkDependency(dep){
             let b = parseFloat(varResult)
             if(listDependency.operator==='<'){
                 if(listDependency.result === varResult){
-                    console.log("true")
                     return true
                 }
                 if(a<b){
@@ -490,7 +555,6 @@ function checkDependency(dep){
             }
             if(listDependency.operator==='='){
                 if(a <= b){
-                    console.log("true")
                     return true
                 }
               
@@ -510,7 +574,6 @@ function checkDependency(dep){
             let b = parseFloat(varResult)
             if(listDependency.operator==='>'){
                 if(listDependency.result === varResult){
-                    console.log("true")
                     return true
                 }
                 if(a>b){
@@ -520,7 +583,6 @@ function checkDependency(dep){
             }
             if(listDependency.operator==='='){
                 if(a > b){
-                    console.log("true")
                     return true
                 }
               
@@ -541,7 +603,6 @@ function checkDependency(dep){
             let b = parseFloat(varResult)
             if(listDependency.operator==='<'){
                 if(listDependency.result === varResult){
-                    console.log("true")
                     return true
                 }
                 if(a<b){
@@ -551,7 +612,6 @@ function checkDependency(dep){
             }
             if(listDependency.operator==='='){
                 if(a < b){
-                    console.log("true")
                     return true
                 }
               
@@ -589,11 +649,9 @@ function decisionAnotation(goal, word){
     // let stringarray = options.split(",")
     let stringarray = options.split("#")
 
-
     goal.children.forEach(child =>{
         let indexName = child.name.search(/\:/)
         let namechild = child.name.substring(0, indexName);
-        debugger
         if(stringarray.includes(namechild)){
             child.unordered = true;
         }else{
@@ -603,16 +661,13 @@ function decisionAnotation(goal, word){
 
     goal.children.sort(prioritySort);
 
-    console.log("ME", goal.children)
 
-    debugger
 
     
 
 }
 
 function prioritySort(a, b){
-    debugger
 
     if(a.unordered && b.unordered){
         let aPri = getFactorValue(a.id, "priority");
@@ -674,7 +729,6 @@ function showAttributeIcon(options) {
         }
     });
     var t1 = performance.now();
-    console.log('Execution time: ' + (t1 - t0) + 'ms');
 }
 
 function getChildrenGoals(goal){//guarantees that each goal in allGoals has their children

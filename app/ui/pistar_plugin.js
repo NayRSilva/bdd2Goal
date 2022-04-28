@@ -33,6 +33,7 @@ async function loadText(url) {
 }
 
 function readText(text){
+
     let remove = "Coverage report generated"
     let indexRemove = text.indexOf(remove)
     let result;
@@ -352,6 +353,7 @@ function showWeightModal() {
 }
 
 function treatArrayData(data){
+    debugger
     let obj = data[0]
 
     let elements = obj.elements;
@@ -426,12 +428,19 @@ function loadJsonData(source) {
             if(indexRemove!=(-1)){
             debugger
 
-                content = content.substring(1, indexRemove-1)
+                content = content.substring(0, indexRemove)
+                console.log(content)
 
             }
-			
             var data = JSON.parse(content);
             if(Array.isArray(data)){
+                while(data.length>1){
+                    console.log("Maior que 1")
+                    let newData = new Array();
+                    let aux = data.pop()
+                    newData.push(aux) 
+                    treatArrayData(newData)
+                }
                 treatArrayData(data);
             }
             else{
