@@ -50,7 +50,10 @@ Caso tenha outra configuração no seu servidor HTTP, altere o destino conforme 
  ![Adicionando novo atributo](docs/images/pistar_2.png)
  
  
- Ao selecionar uma tarefa (objeto task), e adicionar um novo atributo, o sistema deve mostrar ao invés de um campo livre, um campo de seleção única contendo a lista carregada a partir do diretório __json__ na raiz do projeto, conforme a imagem abaixo.
+ Ao selecionar uma tarefa (objeto task), e adicionar um novo atributo de nome "feature", o sistema deve mostrar ao invés de um campo livre, um campo de seleção única contendo a lista carregada a partir do diretório __json__ na raiz do projeto, conforme a imagem abaixo. Adicionalmente, nesse Fork o sistema abrirá ainda os seguintes campos: benefit, penalty, cost, risk. Esses campos só precisam ser utilizados no caso do uso de módulo de prioridade
+
+![Novas propriedades](https://user-images.githubusercontent.com/38412383/167320965-681ac6fe-7ce0-4619-bb9f-2361dedb7d6f.PNG)
+
  
  ![Lista de tarefas](docs/images/pistar_plugin_0.png)
  
@@ -141,4 +144,52 @@ ui.components.PropertiesTableView.prototype.renderCustomProperty = function (pro
 ```
 
 
+## Módulo de Priorização
 
+Um módulo de cálculo de prioridade foi adicionado ao trabalho no presente Fork.
+
+### Modelagem para o módulo de priorização
+
+Para modelar o modelo para ser utilizado com o módulo de priorização por favor considere além do já mencionado acima as seguintes regras de nomenclatura
+
+- Para Goals: Todo nome deve começar com G seguido de um número índice. Os índices começam em 1 e vão aumentando, os índices são globais. Para Goals filhos de um mesmo pai, os Goals cujos índices são menores são considerados como dependências. Ou seja, se G1 e G2 são filhos de G0, G1 **deve** ser cumprido antes de G0
+- Para Tasks: Similarmente a Goals as Tasks devem começar com T seguido de um índice. Porém os índices de Tasks são locais, ou seja, G1 pode possuir tasks T1 e T2 e G2 também pode possuir tasks cujos nomes começam com T1 e T2.
+- **Notação de Paralelismo**: Como visto, por padrão a ferramente considera que Tasks e Goals de índices menores são dependências dos índices seguintes. Caso queira remover essa consideração e ordenar as Tasks ou Goals por prioridade use a notação (X1#X2#X3) ao final da descrição do elemento, exemplo: G0: Criar Secretária (G1#G2)
+
+### O cálculo
+
+O primeiro passo para utilizar o módulo de prioridade é preencher os campos benefit, penalty, cost, risk com valores de 1-9, segue uma pequena explicação de cada campo:
+
+- **benefit**: Medida do quanto a tarefa influi positivamente no sistema, onde 1 a tarefa traz pouquíssimo valor ao projeto; 9 a tarefa agrega muito valor ao projeto, provavelmente é muito importante para o objetivo principal
+
+- **penalty**: São penalidades que a falta da tarefa pode incluir no sistema, onde 1 é nenhuma penalidade e 9 é uma penalidade muito séria. Por exemplo, uma tarefa relacionada à segurança de um sistema de pagamento, ou a um requisito que existe para seguir leis governamentais, pode não ter um benefício alto, mas tem uma penalidade muito alta caso não cumprida
+
+- **cost**: Envolve a complexidade da tarefa, exemplo, se a tarefa precisa de muitos cenários de teste, se os designs e códigos usados podem ser reutilizados, etc.
+
+- **risk**: Mede o risco técnico da tarefa, onde 1- você faz essa tarefa até de olhos fechados e 9 - você nao sabe por onde começar, as tecnologias utilizadas são desconhecidas pela equipe, a pessoa que normalmente seria responsável esta incapacitada e etc
+
+Idealmente os campos benefit e priority devem ser preenchidos com o auxílio de alguém do time de negócios enquanto cost e risk devem ser preenchidos pelo time de desenvolvimento.
+
+Uma vez que esses campos estão preenchidos é possível modificar os pesos de cada campo (onde cada campo tem peso 1 por definição) e calcular a prioridade de cada Task (e seus respectivos testes de BDD) no menu Help.
+
+![Botão para Modificar Pesos](https://user-images.githubusercontent.com/38412383/167321486-3ca47e01-8e7e-49e0-9eda-bbb8b5ec41aa.PNG)
+![Modal de modificação dos pesos](https://user-images.githubusercontent.com/38412383/167321489-284e2efb-99f9-46e9-ae70-03686e35fe67.PNG)
+
+
+
+
+![Botão para modificar a prioridade](https://user-images.githubusercontent.com/38412383/167321526-2e33a7ed-c35c-4edc-b1d2-1bb7ca78fe78.PNG)
+
+### Caminhos de Desenvolvimento
+
+Também é possível gerar uma sugestão de Sequências de Desenvolvimento baseada na relação de dependências entre tarefas e nas prioridades. Para isso, é necessário primeiro fazer o processo de priorização. 
+
+__Observação Importante:__ É aqui que a notação de paralelismo é utilizada se necessária.
+
+Para fazer o cálculo dos caminhos basta acessar o menu Help e clicar em Calcular Sequência de Desenvolvimento. Isso abre uma modal com várias sugestões que seguem o caminho do grafo. O que está em vermelho são Goals e Tasks não cumpridas e em verde são já cumpridas.
+
+
+![Modal de Sequência](https://user-images.githubusercontent.com/38412383/167321929-2ba50ca6-4b86-4a5f-a0d7-a98d5ef3b480.PNG)
+
+
+Ao clicar em Baixar Informação Cenários, caso haja tasks não cumpridas o usuário recebe um JSON contendo as informações dos cenários com status Skipped ou Failed.
