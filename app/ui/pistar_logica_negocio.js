@@ -12,9 +12,9 @@ let allGoals=[];
 var arrayScenarios = new Array();
 
 let penaltyW=1;
-let benefitW=2;
+let benefitW=1;
 let costW=1;
-let riskW=0.5;
+let riskW=1;
 
 var goalColours = {
     'true' : '#6CFA4B',
@@ -217,7 +217,6 @@ function printSequencePaths(paths){
         }
     })
 
-    console.log("printable", printable)
 
     getFailedSkippedScenarios(printable)
     populateModal(printable);
@@ -297,12 +296,11 @@ function populateModal(printable){
 }
 
 function downloadScenario(index){
-    debugger
     let i = index-1;
     let scenarios = arrayScenarios[i];
-    console.log("oi")
-    let text= ""
+    let text= "[\n"
     scenarios.forEach(s => text = text + JSON.stringify(s) + "\n")
+    text = text+ "\n]"
     let element = document.createElement('a');
     element.setAttribute('href', 'data:text/json;charset=utf-8,' + encodeURIComponent(text));
     element.setAttribute('download', 'scenariosSeq'+index+".txt");
@@ -813,6 +811,10 @@ function calculateTaskProperties(penaltyW, benefitW, costW, riskW){
     let totalCost = sumArray(costArray);
     let totalRisk = sumArray(riskArray);
     let totalValue = sumArray(valueArray);
+    console.log("total tvalue", totalValue)
+    console.log("total risk", totalRisk)
+
+    console.log("total Cost", totalCost)
     tasks.forEach(function (t){
         t.pValue = calculatePercentage(t.tValue, totalValue);
         t.pCost = calculatePercentage(t.Wcost,totalCost);
@@ -820,6 +822,11 @@ function calculateTaskProperties(penaltyW, benefitW, costW, riskW){
        
         let priority = (t.pValue / ((t.pCost * costW) + (t.pRisk * riskW))).toFixed(2);
         t.priority = priority;
+
+        console.log("totalValue", t.pValue)
+        console.log("% cost and risk", t.pCost, t.pRisk)
+
+        console.log("HERE Pc, P r: ", costW, riskW)
 
         createPropertiesTask(t.id, priority, "priority")
         // createPropertiesTask(t.id, t.pValue, "ValueP")

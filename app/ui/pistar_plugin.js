@@ -420,7 +420,6 @@ function loadJsonData(source) {
 	
 		reader.onload = function(fileLoadedEvent){
             var content = fileLoadedEvent.target.result;
-            console.log("cansada", content)
             
             let remove = "Coverage report generated"
             let indexRemove = content.indexOf(remove)
@@ -429,13 +428,11 @@ function loadJsonData(source) {
             debugger
 
                 content = content.substring(0, indexRemove)
-                console.log(content)
 
             }
             var data = JSON.parse(content);
             if(Array.isArray(data)){
                 while(data.length>1){
-                    console.log("Maior que 1")
                     let newData = new Array();
                     let aux = data.pop()
                     newData.push(aux) 
